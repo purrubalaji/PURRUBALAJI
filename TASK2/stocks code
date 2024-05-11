@@ -1,0 +1,345 @@
+Stock Price Prediction:
+#Importing all the required libraries
+
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+# Importing dataset
+
+data = pd.read_csv("../input/nyse/prices-split-adjusted.csv")
+df = pd.DataFrame(data)
+df.head()
+
+
+df.describe()
+
+# showing column wise %ge of NaN values they contains 
+
+for i in df.columns:
+  print(i,"\t-\t", df[i].isna().mean()*100)
+
+
+df = df[df['symbol']=='AAP']   # Choosin stock values for any company 
+
+cormap = df.corr()
+fig, ax = plt.subplots(figsize=(5,5))
+sns.heatmap(cormap, annot = True)
+<AxesSubplot:>
+
+def get_corelated_col(cor_dat, threshold): 
+  # Cor_data to be column along which corelation to be measured 
+  #Threshold be the value above which of corelation to considered
+  feature=[]
+  value=[]
+
+  for i ,index in enumerate(cor_dat.index):
+    if abs(cor_dat[index]) > threshold:
+      feature.append(index)
+      value.append(cor_dat[index])
+
+  df = pd.DataFrame(data = value, index = feature, columns=['corr value'])
+  return df
+top_corelated_values = get_corelated_col(cormap['close'], 0.60)
+top_corelated_values
+
+
+df = df[top_corelated_values.index]
+df.head()
+
+
+df.shape
+(1762, 4)
+sns.pairplot(df)
+plt.tight_layout()
+
+
+
+X = df.drop(['close'], axis=1)
+y = df['close']
+
+from sklearn.preprocessing import MinMaxScaler
+
+scaler = MinMaxScaler()
+X = pd.DataFrame(scaler.fit_transform(X), columns=X.columns)
+X.head()
+
+
+Prediction Model
+#now lets split data in test train pairs
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
+
+Acc = []
+1. Linear Regression
+from sklearn.linear_model import LinearRegression
+
+# model training
+
+model_1 = LinearRegression()
+model_1.fit(X_train, y_train)
+LinearRegression()
+# prediction
+y_pred_1 = model_1.predict(X_test)
+pred_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred_1})
+pred_df.head()
+Actual	Predicted
+
+# Measure the Accuracy Score
+
+from sklearn.metrics import r2_score
+ 
+print("Accuracy score of the predictions: {0}".format(r2_score(y_test, y_pred_1)))
+Acc.append(r2_score(y_test, y_pred_1))
+Accuracy score of the predictions: 0.9931342019332019
+plt.figure(figsize=(8,8))
+plt.ylabel('Close Price', fontsize=16)
+plt.plot(pred_df)
+plt.legend(['Actual Value', 'Predictions'])
+plt.show()
+
+2. ANN
+# Model Creation
+
+from keras.models import Sequential
+from keras.layers import Dense
+
+def regressor(inp_dim):
+    
+    model = Sequential()
+    
+    model.add(Dense(20, input_dim=inp_dim, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(25, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(10, kernel_initializer='normal', activation='relu'))
+    model.add(Dense(1, kernel_initializer='normal'))
+    
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    
+    return model
+# Model Training
+
+# Prediction
+
+y_pred_2 = model_2.predict(X_test)
+pred_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred_2.flatten()})
+pred_df.head()
+Actual	Predicted
+
+# Measure the Accuracy Score
+
+from sklearn.metrics import r2_score
+ 
+print("Accuracy score of the predictions: {0}".format(r2_score(y_test, y_pred_2)))
+Acc.append(r2_score(y_test, y_pred_2))
+Accuracy score of the predictions: 0.9877609818668082
+plt.figure(figsize=(8,8))
+plt.ylabel('Close Price', fontsize=16)
+plt.plot(pred_df)
+plt.legend(['Actual Value', 'Predictions'])
+plt.show()
+
+3. CNN
+X_train = np.array(X_train).reshape(X_train.shape[0], X_train.shape[1], 1)
+X_test = np.array(X_test).reshape(X_test.shape[0], X_test.shape[1], 1)
+from tensorflow.keras import Sequential,utils
+from tensorflow.keras.layers import Flatten, Dense, Conv1D, MaxPool1D, Dropout
+
+def reg():
+    
+    model = Sequential()
+    
+    model.add(Conv1D(32, kernel_size=(3,), padding='same', activation='relu', input_shape = (X_train.shape[1],1)))
+    model.add(Conv1D(64, kernel_size=(3,), padding='same', activation='relu'))
+    model.add(Conv1D(128, kernel_size=(5,), padding='same', activation='relu'))
+    
+    model.add(Flatten())
+    
+    model.add(Dense(50, activation='relu'))
+    model.add(Dense(20, activation='relu'))
+    model.add(Dense(units = 1))
+    
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    
+    return model
+# Model Training
+
+
+# Prediction
+
+y_pred_3 = model_3.predict(X_test)
+pred_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred_3.flatten()})
+pred_df.head()
+
+
+
+from sklearn.metrics import r2_score
+ 
+print("Accuracy score of the predictions: {0}".format(r2_score(y_test, y_pred_3)))
+Acc.append(r2_score(y_test, y_pred_3))
+Accuracy score of the predictions: 0.9905183812120758
+plt.figure(figsize=(8,8))
+plt.ylabel('Close Price', fontsize=16)
+plt.plot(pred_df)
+plt.legend(['Actual Value', 'Predictions'])
+plt.show()
+
+Comparision of Accuracies of different models
+
+plt.plot(range(3), Acc, color='green', linestyle='dashed', linewidth = 3, 
+         marker='o', markerfacecolor='blue', markersize=12) 
+plt.ylabel('Acc')
+plt.xlabel('Models')
+plt.title("Accuracies")
+plt.xticks(range(3), ['Linear Regression', 'ANN', 'CNN'])
+plt.show()
+
+Now converting data in a time series data and applying some more models.
+close = df.reset_index()['close']
+close.head()
+
+Name: close, dtype: float64
+plt.plot(close)
+plt.show()
+
+time_step = 30
+X, y = [], []
+
+for i in range(len(close)-time_step-1):
+    X.append(close[i:(i+time_step)])
+    y.append(close[(i+time_step)])
+
+X = np.array(X)
+y = np.array(y)
+X[:5]
+array([[40.380001, 40.139999, 40.490002, 40.48    , 40.639999, 40.240002,
+        39.540001, 40.09    , 39.560001, 39.310001, 39.5     , 39.16    ,
+        39.23    , 39.740002, 40.5     , 40.549999, 40.59    , 39.77    ,
+        39.450001, 40.490002, 41.189999, 41.189999, 40.93    , 40.720001,
+        40.810001, 41.57    , 42.330002, 42.549999, 42.810001, 42.630001],
+       [40.139999, 40.490002, 40.48    , 40.639999, 40.240002, 39.540001,
+        40.09    , 39.560001, 39.310001, 39.5     , 39.16    , 39.23    ,
+        39.740002, 40.5     , 40.549999, 40.59    , 39.77    , 39.450001,
+        40.490002, 41.189999, 41.189999, 40.93    , 40.720001, 40.810001,
+        41.57    , 42.330002, 42.549999, 42.810001, 42.630001, 42.880001],
+       [40.490002, 40.48    , 40.639999, 40.240002, 39.540001, 40.09    ,
+        39.560001, 39.310001, 39.5     , 39.16    , 39.23    , 39.740002,
+        40.5     , 40.549999, 40.59    , 39.77    , 39.450001, 40.490002,
+        41.189999, 41.189999, 40.93    , 40.720001, 40.810001, 41.57    ,
+        42.330002, 42.549999, 42.810001, 42.630001, 42.880001, 40.150002],
+       [40.48    , 40.639999, 40.240002, 39.540001, 40.09    , 39.560001,
+        39.310001, 39.5     , 39.16    , 39.23    , 39.740002, 40.5     ,
+        40.549999, 40.59    , 39.77    , 39.450001, 40.490002, 41.189999,
+        41.189999, 40.93    , 40.720001, 40.810001, 41.57    , 42.330002,
+        42.549999, 42.810001, 42.630001, 42.880001, 40.150002, 40.      ],
+       [40.639999, 40.240002, 39.540001, 40.09    , 39.560001, 39.310001,
+        39.5     , 39.16    , 39.23    , 39.740002, 40.5     , 40.549999,
+        40.59    , 39.77    , 39.450001, 40.490002, 41.189999, 41.189999,
+        40.93    , 40.720001, 40.810001, 41.57    , 42.330002, 42.549999,
+        42.810001, 42.630001, 42.880001, 40.150002, 40.      , 40.240002]])
+y[:5]
+array([42.880001, 40.150002, 40.      , 40.240002, 40.220001])
+from sklearn.preprocessing import MinMaxScaler
+
+scaler = MinMaxScaler()
+X = scaler.fit_transform(X)
+pd.DataFrame(X).head()
+
+
+Prediction
+#now lets split data in test train pairs
+
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size = 0.2, shuffle=False)
+
+Acc = []
+1. LSTM
+X_train_ = X_train.reshape(X_train.shape[0],X_train.shape[1],1)
+X_test_ = X_test.reshape(X_test.shape[0],X_test.shape[1],1)
+from tensorflow.keras.layers import LSTM
+
+def Reg():
+    model = Sequential()
+    
+    model.add(LSTM(70, return_sequences=True, input_shape=(30,1)))
+    model.add(LSTM(70, return_sequences=True))
+    model.add(LSTM(70))
+    model.add(Dense(1))
+    
+    model.compile(loss='mean_squared_error', optimizer='adam')
+    
+    return model
+# Model Training
+
+
+# Prediction
+
+y_pred_1 = model_1.predict(X_test_)
+pred_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred_1.flatten()})
+pred_df.head()
+
+
+from sklearn.metrics import r2_score
+ 
+print("Accuracy score of the predictions: {0}".format(r2_score(y_test, y_pred_1)))
+Acc.append(r2_score(y_test, y_pred_1))
+Accuracy score of the predictions: 0.8540723542553025
+plt.figure(figsize=(8,8))
+plt.ylabel('Close Price', fontsize=16)
+plt.plot(pred_df)
+plt.legend(['Actual Value', 'Predictions'])
+plt.show()
+
+2. ANN
+# Model Training
+
+# Prediction
+
+y_pred_2 = model_2.predict(X_test)
+# Measure the Accuracy Score
+
+from sklearn.metrics import r2_score
+ 
+print("Accuracy score of the predictions: {0}".format(r2_score(y_test, y_pred_2)))
+Acc.append(r2_score(y_test, y_pred_2))
+Accuracy score of the predictions: 0.7776921663567443
+plt.figure(figsize=(8,8))
+plt.ylabel('Close Price', fontsize=16)
+plt.plot(pred_df)
+plt.legend(['Actual Value', 'Predictions'])
+plt.show()
+
+3. CNN
+# Model Training
+
+# Prediction
+
+y_pred_3 = model_3.predict(X_test_)
+pred_df = pd.DataFrame({'Actual': y_test, 'Predicted': y_pred_3.flatten()})
+pred_df.head()
+
+
+from sklearn.metrics import r2_score
+ 
+print("Accuracy score of the predictions: {0}".format(r2_score(y_test, y_pred_3)))
+Acc.append(r2_score(y_test, y_pred_3))
+Accuracy score of the predictions: 0.8647900448552586
+plt.figure(figsize=(8,8))
+plt.ylabel('Close Price', fontsize=16)
+plt.plot(pred_df)
+plt.legend(['Actual Value', 'Predictions'])
+plt.show()
+
+Comparision of Accuracies of different models
+
+plt.plot(range(3), Acc, color='green', linestyle='dashed', linewidth = 3, 
+         marker='o', markerfacecolor='blue', markersize=12) 
+plt.ylabel('Acc')
+plt.xlabel('Models')
+plt.title("Accuracies")
+plt.xticks(range(3), ['LSTM', 'ANN', 'CNN'])
+plt.show()
+
+ 
